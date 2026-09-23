@@ -1,0 +1,1190 @@
+﻿<Window x:Class="ParadoxusBrowser.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ParadoxusBrowser"
+        xmlns:vm="clr-namespace:ParadoxusBrowser.ViewModels"
+        xmlns:controls="clr-namespace:ParadoxusBrowser.Views.Controls"
+        xmlns:views="clr-namespace:ParadoxusBrowser.Views"
+        mc:Ignorable="d"
+        Title="Paradoxus Browser" Height="800" Width="1200"
+        MinHeight="500" MinWidth="750"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.BitmapScalingMode="HighQuality"
+        Background="{DynamicResource BgDarkBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="0"
+                      UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <!-- DataContext is assigned in code-behind constructor with session restore flag -->
+
+    <Grid Background="{DynamicResource BgDarkBrush}">
+        <Grid.Style>
+            <Style TargetType="Grid">
+                <Setter Property="Margin" Value="0"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WindowState}" Value="Maximized">
+                        <!-- 7 пикселей компенсируют системный оверскан WindowChrome -->
+                        <Setter Property="Margin" Value="7"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
+        <Grid.RowDefinitions>
+            <!-- Title Bar & Tab Strip -->
+            <RowDefinition Height="40" />
+            <!-- Navigation Toolbar & Omnibox -->
+            <RowDefinition Height="46" />
+            <!-- Loading Indicator -->
+            <RowDefinition Height="3" />
+            <!-- Bookmarks Bar (Optional/Visible) -->
+            <RowDefinition Height="Auto" />
+            <!-- Main Web Content Host -->
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ========================================== -->
+        <!-- ROW 0: Title Bar & Tabs Strip              -->
+        <!-- ========================================== -->
+        <Border Grid.Row="0" x:Name="TitleBarBorder" Background="{DynamicResource HeaderBgBrush}" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- App Logo -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Tabs Area -->
+                    <ColumnDefinition Width="*" />
+                    <!-- Window Controls (Min, Max, Close) -->
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- App Logo -->
+                <Path Grid.Column="0"
+                      Data="{StaticResource ParadoxusLogoIcon}"
+                      Width="16" Height="16"
+                      Fill="{DynamicResource BraveOrangeBrush}"
+                      Stretch="Uniform"
+                      Margin="12,0,8,0"
+                      VerticalAlignment="Center" />
+
+                <!-- Horizontal Tabs Container -->
+                <ScrollViewer Grid.Column="1"
+                              x:Name="TabStripScrollViewer" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled"
+                              Focusable="False"
+                              Background="Transparent"
+                              WindowChrome.IsHitTestVisibleInChrome="True"
+                              MouseRightButtonUp="OnTabStripMouseRightButtonUp">
+                    <!-- Tab Strip Background Context Menu -->
+                    <ScrollViewer.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Новая вкладка"
+                                      InputGestureText="Ctrl+T"
+                                      Command="{Binding NewTabCommand}">
+                                <MenuItem.Icon>
+                                    <Path Data="{StaticResource PlusIcon}" Width="12" Height="12" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Открыть закрытую вкладку"
+                                      InputGestureText="Ctrl+Shift+T"
+                                      Command="{Binding ReopenClosedTabCommand}"
+                                      IsEnabled="{Binding HasClosedTabs}">
+                                <MenuItem.Icon>
+                                    <Path Data="{StaticResource HistoryIcon}" Width="12" Height="12" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Добавить все вкладки в закладки"
+                                      Command="{Binding BookmarkAllTabsCommand}">
+                                <MenuItem.Icon>
+                                    <Path Data="{StaticResource StarFilledIcon}" Width="12" Height="12" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem Header="Настройки"
+                                      InputGestureText="Ctrl+,"
+                                      Command="{Binding ToggleSettingsCommand}">
+                                <MenuItem.Icon>
+                                    <Path Data="{StaticResource SettingsGearIcon}" Width="12" Height="12" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </ScrollViewer.ContextMenu>
+
+                    <Grid x:Name="TabStripGrid" VerticalAlignment="Stretch" Background="Transparent" WindowChrome.IsHitTestVisibleInChrome="True" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                        <StackPanel x:Name="TabStripStackPanel" Orientation="Horizontal" VerticalAlignment="Stretch" Background="Transparent" WindowChrome.IsHitTestVisibleInChrome="True">
+                            <!-- Tab Items -->
+                            <ItemsControl x:Name="TabsItemsControl" ItemsSource="{Binding Tabs}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="TabBorder"
+                                            Height="34"
+                                            MinWidth="140"
+                                            MaxWidth="220"
+                                            Margin="0,0,2,0"
+                                            CornerRadius="6,6,0,0"
+                                            Background="{DynamicResource SurfaceBgBrush}"
+                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                            BorderThickness="1,1,1,0"
+                                            Cursor="Hand"
+                                            WindowChrome.IsHitTestVisibleInChrome="True"
+                                            MouseLeftButtonDown="OnTabSelected"
+                                            PreviewMouseLeftButtonDown="OnTabPreviewMouseLeftButtonDown"
+                                            PreviewMouseMove="OnTabPreviewMouseMove"
+                                            PreviewMouseLeftButtonUp="OnTabPreviewMouseLeftButtonUp">
+                                        <!-- Tab Item Context Menu -->
+                                        <Border.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Новая вкладка справа"
+                                                          Command="{Binding DataContext.NewTabRightCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}">
+                                                    <MenuItem.Icon>
+                                                        <Path Data="{StaticResource PlusIcon}" Width="12" Height="12" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Дублировать вкладку"
+                                                          Command="{Binding DataContext.DuplicateTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}">
+                                                    <MenuItem.Icon>
+                                                        <Path Data="{StaticResource DuplicateIcon}" Width="12" Height="12" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Перезагрузить"
+                                                          InputGestureText="Ctrl+R"
+                                                          Command="{Binding DataContext.ReloadTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}">
+                                                    <MenuItem.Icon>
+                                                        <Path Data="{StaticResource ReloadIcon}" Width="12" Height="12" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Отключить / Включить звук на вкладке"
+                                                          Command="{Binding DataContext.ToggleMuteTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}">
+                                                    <MenuItem.Icon>
+                                                        <Path Data="{StaticResource SpeakerIcon}" Width="12" Height="12" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Закрепить / Открепить вкладку"
+                                                          Command="{Binding DataContext.TogglePinTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}">
+                                                    <MenuItem.Icon>
+                                                        <Path Data="{StaticResource PinIcon}" Width="12" Height="12" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator />
+                                                <MenuItem Header="Закрыть вкладку"
+                                                          InputGestureText="Ctrl+W"
+                                                          Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}">
+                                                    <MenuItem.Icon>
+                                                        <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" Fill="{DynamicResource AlertRedBrush}" Stretch="Uniform" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Закрыть другие вкладки"
+                                                          Command="{Binding DataContext.CloseOtherTabsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}" />
+                                                <MenuItem Header="Закрыть вкладки справа"
+                                                          Command="{Binding DataContext.CloseTabsToRightCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          CommandParameter="{Binding}" />
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
+
+                                        <Border.Triggers>
+                                            <EventTrigger RoutedEvent="Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                         From="0" To="1"
+                                                                         Duration="0:0:0.15"
+                                                                         DecelerationRatio="0.8" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </Border.Triggers>
+
+                                        <Grid Margin="10,0,8,0">
+                                            <Grid.ColumnDefinitions>
+                                                <!-- Favicon/Icon -->
+                                                <ColumnDefinition Width="Auto" />
+                                                <!-- Tab Title -->
+                                                <ColumnDefinition Width="*" />
+                                                <!-- Tab Audio Mute Button -->
+                                                <ColumnDefinition Width="Auto" />
+                                                <!-- Close Tab Button -->
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Active Tab Orange Top Accent Line -->
+                                            <Border x:Name="ActiveIndicator"
+                                                    Grid.ColumnSpan="4"
+                                                    Height="2"
+                                                    VerticalAlignment="Top"
+                                                    Background="{DynamicResource BraveOrangeBrush}"
+                                                    Visibility="Collapsed" />
+
+                                            <!-- Tab Icon -->
+                                            <Grid Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0">
+                                                <!-- Favicon Image from Web -->
+                                                <Image Width="14" Height="14"
+                                                       Source="{Binding FaviconUrl}"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       Visibility="{Binding HasFavicon, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+
+                                                <!-- Settings Gear Icon (for Settings Tab) -->
+                                                <Path Width="14" Height="14"
+                                                       Data="{StaticResource SettingsGearIcon}"
+                                                       Fill="{DynamicResource BraveOrangeBrush}"
+                                                       Stretch="Uniform"
+                                                       Visibility="{Binding IsSettingsTab, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+
+                                                <!-- Fallback Globe Icon (when not private, no favicon, and not settings) -->
+                                                <Path Width="14" Height="14"
+                                                       Data="{StaticResource GlobeIcon}"
+                                                       Fill="{DynamicResource TextMutedBrush}"
+                                                       Stretch="Uniform">
+                                                    <Path.Style>
+                                                        <Style TargetType="Path">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding HasFavicon}" Value="False" />
+                                                                        <Condition Binding="{Binding IsPrivate}" Value="False" />
+                                                                        <Condition Binding="{Binding IsSettingsTab}" Value="False" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Path.Style>
+                                                </Path>
+
+                                                <!-- InPrivate Mask Icon -->
+                                                <Path Width="14" Height="14"
+                                                       Data="{StaticResource IncognitoIcon}"
+                                                       Fill="{DynamicResource PrivatePurpleBrush}"
+                                                       Stretch="Uniform"
+                                                       Visibility="{Binding IsPrivate, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                                            </Grid>
+
+                                            <!-- Title Text -->
+                                            <TextBlock x:Name="TabTitleText"
+                                                       Grid.Column="1"
+                                                       Text="{Binding Title}"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       FontSize="12"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"
+                                                       ToolTip="{Binding Title}" />
+
+                                            <!-- Tab Audio / Speaker Button (Mute Toggle) -->
+                                            <Button x:Name="AudioButton"
+                                                    Grid.Column="2"
+                                                    Style="{StaticResource IconButton}"
+                                                    Width="18" Height="18"
+                                                    Padding="2"
+                                                    Margin="2,0,2,0"
+                                                    VerticalAlignment="Center"
+                                                    Focusable="False"
+                                                    Command="{Binding DataContext.ToggleMuteTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="Отключить / включить звук"
+                                                    Visibility="{Binding ShowAudioIndicator, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}">
+                                                <Grid>
+                                                    <Path Data="{StaticResource SpeakerIcon}"
+                                                          Width="11" Height="11"
+                                                          Fill="{DynamicResource BraveOrangeBrush}"
+                                                          Stretch="Uniform"
+                                                          Visibility="{Binding IsMuted, Converter={x:Static local:MainWindow.InverseBoolToVisibilityConverter}}" />
+                                                    <Path Data="{StaticResource SpeakerMutedIcon}"
+                                                          Width="11" Height="11"
+                                                          Fill="{DynamicResource AlertRedBrush}"
+                                                          Stretch="Uniform"
+                                                          Visibility="{Binding IsMuted, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                                                </Grid>
+                                            </Button>
+
+                                            <!-- Close Button (X) -->
+                                            <Button x:Name="CloseTabButton"
+                                                    Grid.Column="3"
+                                                    Style="{StaticResource IconButton}"
+                                                    Width="20" Height="20"
+                                                    Padding="4"
+                                                    Margin="2,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Click="OnCloseTabClick"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="Закрыть вкладку">
+                                                <Path Data="{StaticResource CloseIcon}"
+                                                      Fill="{DynamicResource TextSecondaryBrush}"
+                                                      Stretch="Uniform" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <!-- Active Tab Styling Trigger -->
+                                        <DataTrigger Value="True">
+                                            <DataTrigger.Binding>
+                                                <MultiBinding Converter="{x:Static local:MainWindow.TabMatchConverter}">
+                                                    <Binding />
+                                                    <Binding Path="DataContext.SelectedTab" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                                </MultiBinding>
+                                            </DataTrigger.Binding>
+                                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource BgDarkBrush}" />
+                                            <Setter TargetName="ActiveIndicator" Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <!-- Pinned Tab Styling Trigger -->
+                                        <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                            <Setter TargetName="TabBorder" Property="MinWidth" Value="42" />
+                                            <Setter TargetName="TabBorder" Property="MaxWidth" Value="42" />
+                                            <Setter TargetName="TabBorder" Property="Width" Value="42" />
+                                            <Setter TargetName="TabTitleText" Property="Visibility" Value="Collapsed" />
+                                            <Setter TargetName="CloseTabButton" Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Add Tab Button (+) -->
+                        <Button Style="{StaticResource IconButton}"
+                                Width="28" Height="28"
+                                Margin="4,0,2,3"
+                                VerticalAlignment="Bottom"
+                                Command="{Binding NewTabCommand}"
+                                ToolTip="Новая вкладка (Ctrl+T)"
+                                WindowChrome.IsHitTestVisibleInChrome="True">
+                            <Path Data="{StaticResource PlusIcon}"
+                                  Width="12" Height="12"
+                                  Fill="{DynamicResource TextSecondaryBrush}"
+                                  Stretch="Uniform" />
+                        </Button>
+
+                        <!-- InPrivate / Incognito Tab Button -->
+                        <Button Style="{StaticResource IconButton}"
+                                Width="28" Height="28"
+                                Margin="2,0,4,3"
+                                VerticalAlignment="Bottom"
+                                Command="{Binding NewPrivateTabCommand}"
+                                ToolTip="Новая приватная вкладка (InPrivate)"
+                                WindowChrome.IsHitTestVisibleInChrome="True">
+                            <Path Data="{StaticResource IncognitoIcon}"
+                                  Width="14" Height="14"
+                                  Fill="{DynamicResource PrivatePurpleBrush}"
+                                  Stretch="Uniform" />
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Drop Insertion Indicator -->
+                    <Canvas IsHitTestVisible="False" VerticalAlignment="Stretch">
+                        <Border x:Name="DropInsertionMarker"
+                                Width="3"
+                                Height="30"
+                                CornerRadius="1.5"
+                                Background="#FF7600"
+                                Visibility="Collapsed"
+                                Canvas.Top="2">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#FF7600" BlurRadius="8" ShadowDepth="0" Opacity="0.9"/>
+                            </Border.Effect>
+                        </Border>
+                    </Canvas>
+                </Grid>
+            </ScrollViewer>
+
+                <!-- Window Caption Controls (Min, Max, Close) -->
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource WindowChromeButton}"
+                            Click="OnMinimizeClick"
+                            ToolTip="Свернуть">
+                        <Path Data="{StaticResource WindowMinimizeIcon}"
+                              Fill="{DynamicResource TextSecondaryBrush}"
+                              Stretch="Uniform" Width="10" />
+                    </Button>
+                    <Button Style="{StaticResource WindowChromeButton}"
+                            Click="OnMaximizeClick"
+                            ToolTip="Развернуть">
+                        <Path Data="{StaticResource WindowMaximizeIcon}"
+                              Fill="{DynamicResource TextSecondaryBrush}"
+                              Stretch="Uniform" Width="10" Height="10" />
+                    </Button>
+                    <Button Style="{StaticResource WindowCloseButton}"
+                            Click="OnCloseClick"
+                            ToolTip="Закрыть">
+                        <Path Data="{StaticResource CloseIcon}"
+                              Fill="{DynamicResource TextSecondaryBrush}"
+                              Stretch="Uniform" Width="10" Height="10" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- ROW 1: Navigation Toolbar & Omnibox        -->
+        <!-- ========================================== -->
+        <Border Grid.Row="1" x:Name="NavToolbarBorder" Background="{DynamicResource BgDarkBrush}" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+            <Grid Margin="8,4,8,4">
+                <Grid.ColumnDefinitions>
+                    <!-- Nav buttons (Back, Forward, Refresh, Home) -->
+                    <ColumnDefinition Width="Auto" />
+                    <!-- Omnibox (Address & Search Bar) -->
+                    <ColumnDefinition Width="*" />
+                    <!-- Extension / Utility actions (Downloads, History, Settings, Clear) -->
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Navigation Controls -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <Button Style="{StaticResource IconButton}"
+                            Width="32" Height="32"
+                            Command="{Binding GoBackCommand}"
+                            ToolTip="Назад (Alt+Left)">
+                        <Path Data="{DynamicResource BackIcon}" Width="14" Height="14" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                    </Button>
+
+                    <Button Style="{StaticResource IconButton}"
+                            Width="32" Height="32"
+                            Command="{Binding GoForwardCommand}"
+                            ToolTip="Вперед (Alt+Right)">
+                        <Path Data="{DynamicResource ForwardIcon}" Width="14" Height="14" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                    </Button>
+
+                    <Button Style="{StaticResource IconButton}"
+                            Width="32" Height="32"
+                            Command="{Binding ReloadCommand}"
+                            ToolTip="Обновить (F5)">
+                        <Path Data="{DynamicResource ReloadIcon}" Width="14" Height="14" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                    </Button>
+
+                    <Button Style="{StaticResource IconButton}"
+                            Width="32" Height="32"
+                            Command="{Binding GoHomeCommand}"
+                            ToolTip="Домашняя страница">
+                        <Path Data="{DynamicResource HomeIcon}" Width="15" Height="15" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Omnibox Address & Search Pill -->
+                <Border Grid.Column="1"
+                        x:Name="OmniboxBorder"
+                        Background="{DynamicResource SurfaceBgBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="18"
+                        Height="36">
+                    <Grid Margin="10,0,6,0">
+                        <Grid.ColumnDefinitions>
+                            <!-- SSL Security Lock Badge -->
+                            <ColumnDefinition Width="Auto" />
+                            <!-- Address Input -->
+                            <ColumnDefinition Width="*" />
+                            <!-- Bookmark Star Button -->
+                            <ColumnDefinition Width="Auto" />
+                            <!-- Paradoxus Shields Button -->
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- HTTPS / SSL Indicator -->
+                        <Grid Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <!-- HTTPS Lock (Green) -->
+                            <Path Data="{StaticResource LockIcon}"
+                                  Width="13" Height="13"
+                                  Fill="{DynamicResource HttpsGreenBrush}"
+                                  Stretch="Uniform"
+                                  ToolTip="Безопасное соединение (HTTPS)"
+                                  Visibility="{Binding SelectedTab.IsSecure, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                            <!-- Insecure Lock (Grey/Muted) -->
+                            <Path Data="{StaticResource LockIcon}"
+                                  Width="13" Height="13"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Stretch="Uniform"
+                                  ToolTip="Незащищенное соединение"
+                                  Visibility="{Binding SelectedTab.IsSecure, Converter={x:Static local:MainWindow.InverseBoolToVisibilityConverter}}" />
+                        </Grid>
+
+                        <!-- Address Bar TextBox -->
+                        <TextBox Grid.Column="1"
+                                 x:Name="OmniboxTextBox"
+                                 Text="{Binding SelectedTab.InputUrl, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource OmniboxTextBoxStyle}"
+                                 KeyDown="OnOmniboxKeyDown"
+                                 GotFocus="OnOmniboxGotFocus"
+                                 PreviewMouseLeftButtonDown="OnOmniboxPreviewMouseLeftButtonDown"
+                                 LostKeyboardFocus="OnOmniboxLostKeyboardFocus"
+                                 TextChanged="OnOmniboxTextChanged" />
+
+                        <!-- Trailing Buttons (Zoom Badge + Speedreader + Bookmark) -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Zoom Badge (Pill) -->
+                            <Button Style="{StaticResource IconButton}"
+                                    Command="{Binding SelectedTab.ResetZoomCommand}"
+                                    Cursor="Hand"
+                                    Height="24"
+                                    Margin="2,0,6,0"
+                                    ToolTip="Масштаб страницы. Нажмите, чтобы сбросить на 100%"
+                                    Visibility="{Binding SelectedTab.IsZoomBadgeVisible, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}"
+                                    Opacity="{Binding SelectedTab.ZoomBadgeOpacity}">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="PillBorder"
+                                                Background="{DynamicResource CardBackgroundBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="12"
+                                                Padding="7,2,9,2"
+                                                SnapsToDevicePixels="True">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Path Data="{StaticResource CommandPaletteIcon}"
+                                                      Width="11" Height="11"
+                                                      Fill="{DynamicResource BraveOrangeBrush}"
+                                                      Stretch="Uniform"
+                                                      Margin="0,0,5,0"
+                                                      VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding SelectedTab.ZoomBadgeText}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="PillBorder" Property="Background" Value="{DynamicResource ItemHoverBrush}"/>
+                                                <Setter TargetName="PillBorder" Property="BorderBrush" Value="{DynamicResource BraveOrangeBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <!-- Speedreader Mode Button -->
+                            <Button Style="{StaticResource IconButton}"
+                                    Width="28" Height="28"
+                                    Margin="2,0"
+                                    Command="{Binding SelectedTab.ToggleSpeedreaderCommand}"
+                                    ToolTip="Режим чтения Speedreader (нажмите для включения/выключения)"
+                                    Visibility="{Binding SelectedTab.IsWebVisible, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}">
+                                <Grid>
+                                    <Border Background="{DynamicResource BraveOrangeDimBrush}"
+                                            CornerRadius="4"
+                                            Visibility="{Binding SelectedTab.IsSpeedreaderActive, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                                    <Path Data="{StaticResource BookReaderIcon}"
+                                          Width="13" Height="13"
+                                          Fill="{DynamicResource BraveOrangeBrush}"
+                                          Stretch="Uniform" />
+                                </Grid>
+                            </Button>
+
+                            <!-- Bookmark Button -->
+                            <Button Style="{StaticResource IconButton}"
+                                    Width="28" Height="28"
+                                    Margin="2,0,4,0"
+                                    Command="{Binding ToggleBookmarkCommand}"
+                                    ToolTip="Добавить в закладки (Ctrl+D)">
+                                <Grid>
+                                    <Path Data="{StaticResource StarOutlineIcon}"
+                                          Width="14" Height="14"
+                                          Fill="{DynamicResource TextSecondaryBrush}"
+                                          Stretch="Uniform"
+                                          Visibility="{Binding IsCurrentPageBookmarked, Converter={x:Static local:MainWindow.InverseBoolToVisibilityConverter}}" />
+                                    <Path Data="{StaticResource StarFilledIcon}"
+                                          Width="14" Height="14"
+                                          Fill="{DynamicResource BraveOrangeBrush}"
+                                          Stretch="Uniform"
+                                          Visibility="{Binding IsCurrentPageBookmarked, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Paradoxus Shields Trigger Button -->
+                        <Button Grid.Column="3"
+                                x:Name="ShieldsButton"
+                                Style="{StaticResource ShieldsButtonStyle}"
+                                Height="26"
+                                Command="{Binding ToggleShieldsPopupCommand}"
+                                ToolTip="Paradoxus Shields: блокировка трекеров и рекламы">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource ShieldIcon}"
+                                      Width="13" Height="13"
+                                      Fill="{DynamicResource BraveOrangeBrush}"
+                                      Stretch="Uniform"
+                                      Margin="0,0,5,0" />
+                                <TextBlock Text="{Binding SelectedTab.AdBlockCount}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontWeight="Bold"
+                                           FontSize="11"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Right Utilities: Downloads, History, Settings & Clear Browsing Data -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                    <!-- Downloads Button with Active Badge -->
+                    <Button x:Name="DownloadsButton"
+                            Style="{StaticResource IconButton}"
+                            Width="32" Height="32"
+                            Command="{Binding ToggleDownloadsCommand}"
+                            ToolTip="Загрузки (Ctrl+J)"
+                            Margin="2,0">
+                        <Grid>
+                            <Path Data="{StaticResource DownloadIcon}" Width="15" Height="15" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                            <!-- Badge for active downloads -->
+                            <Border Background="{DynamicResource BraveOrangeBrush}"
+                                    CornerRadius="5"
+                                    Height="10" MinWidth="10"
+                                    Padding="2,0"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,-2,-4,0"
+                                    Visibility="{Binding HasActiveDownloads, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}">
+                                <TextBlock Text="{Binding ActiveDownloadsCount}"
+                                           FontSize="8" FontWeight="Bold"
+                                           Foreground="#FFFFFF"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                    </Button>
+
+                    <Button Style="{StaticResource IconButton}"
+                            Width="32" Height="32"
+                            Command="{Binding ToggleHistoryCommand}"
+                            ToolTip="История посещений (Ctrl+H)">
+                        <Path Data="{DynamicResource HistoryIcon}" Width="15" Height="15" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                    </Button>
+                    <Button Style="{StaticResource IconButton}"
+                            Width="32" Height="32"
+                            Command="{Binding ToggleSettingsCommand}"
+                            ToolTip="Настройки браузера (Ctrl+,)">
+                        <Path Data="{DynamicResource SettingsGearIcon}" Width="15" Height="15" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform" />
+                    </Button>
+                    <Button Style="{StaticResource IconButton}"
+                            Width="32" Height="32"
+                            Command="{Binding ClearBrowsingDataCommand}"
+                            ToolTip="Очистить историю, кэш и cookies">
+                        <Path Data="{DynamicResource TrashIcon}" Width="14" Height="14" Fill="{DynamicResource AlertRedBrush}" Stretch="Uniform" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- ROW 2: Loading Progress Bar (Neon)         -->
+        <!-- ========================================== -->
+        <ProgressBar Grid.Row="2"
+                     Style="{StaticResource NeonProgressBar}"
+                     Value="{Binding SelectedTab.LoadingProgress}"
+                     Visibility="{Binding SelectedTab.IsLoading, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+
+        <!-- ========================================== -->
+        <!-- ROW 3: Bookmarks Bar                       -->
+        <!-- ========================================== -->
+        <Border Grid.Row="3"
+                x:Name="BookmarksBarBorder"
+                Background="{DynamicResource HeaderBgBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                BorderThickness="0,0,0,1"
+                Height="28"
+                Padding="6,0">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Bookmarks}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource IconButton}"
+                                    Height="24"
+                                    Margin="0,0,4,0"
+                                    Padding="6,2"
+                                    Command="{Binding DataContext.OpenBookmarkCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip="{Binding Url}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{DynamicResource StarFilledIcon}" Width="10" Height="10" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding DisplayTitle}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" MaxWidth="160" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- ROW 4: Main Active Tab WebView2 Host       -->
+        <!-- ========================================== -->
+        <Grid Grid.Row="4">
+            <!-- Wayback Machine 404 Notice Bar -->
+            <Border VerticalAlignment="Top"
+                    Background="{DynamicResource SurfaceBgBrush}"
+                    BorderBrush="{DynamicResource BraveOrangeBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,8"
+                    Visibility="{Binding SelectedTab.ShowWaybackNotice, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}"
+                    Panel.ZIndex="100">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Path Grid.Column="0" Data="{StaticResource HistoryIcon}" Width="16" Height="16" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}">
+                        <Run Text="Страница недоступна (404). " FontWeight="SemiBold" />
+                        <Run Text="Проверить архивную копию в Wayback Machine?" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </TextBlock>
+
+                    <Button Grid.Column="2"
+                            Content="Открыть копию"
+                            Style="{StaticResource ShieldsButtonStyle}"
+                            Height="28"
+                            Padding="12,0"
+                            Margin="8,0"
+                            VerticalAlignment="Center"
+                            Command="{Binding SelectedTab.OpenWaybackUrlCommand}" />
+
+                    <Button Grid.Column="3"
+                            Style="{StaticResource IconButton}"
+                            Width="26" Height="26"
+                            Padding="6"
+                            VerticalAlignment="Center"
+                            Command="{Binding SelectedTab.DismissWaybackNoticeCommand}"
+                            ToolTip="Закрыть">
+                        <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" Fill="{DynamicResource TextMutedBrush}" Stretch="Uniform" />
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- New Tab Hub ("Табло") View (shown when SelectedTab.IsHubVisible) -->
+            <views:HubView Visibility="{Binding SelectedTab.IsHubVisible, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+
+            <!-- Full Settings Page (shown when SelectedTab.IsSettingsVisible) -->
+            <views:SettingsView Visibility="{Binding SelectedTab.IsSettingsVisible, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+
+            <!-- Active Tab WebView Control (shown when SelectedTab.IsWebVisible) -->
+            <ContentControl Content="{Binding SelectedTab.WebView}"
+                            Visibility="{Binding SelectedTab.IsWebVisible, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}"
+                            Focusable="False" />
+
+            
+            <!-- Omnibox Search History & Suggestions Popup -->
+            <Popup x:Name="OmniboxSuggestionsPopup"
+                   IsOpen="{Binding IsOmniboxSuggestionsOpen, Mode=TwoWay}"
+                   PlacementTarget="{Binding ElementName=OmniboxBorder}"
+                   Placement="Bottom"
+                   HorizontalOffset="0"
+                   VerticalOffset="4"
+                   Width="{Binding ActualWidth, ElementName=OmniboxBorder}"
+                   StaysOpen="True"
+                   Focusable="False"
+                   AllowsTransparency="True"
+                   PopupAnimation="Fade">
+                <Border Background="{DynamicResource PopupBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="4"
+                        SnapsToDevicePixels="True">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                    </Border.Effect>
+                    <ListBox x:Name="OmniboxSuggestionsList"
+                             ItemsSource="{Binding OmniboxSuggestions}"
+                             SelectedItem="{Binding SelectedOmniboxSuggestion, Mode=TwoWay}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             MaxHeight="260"
+                             Focusable="False"
+                             PreviewMouseLeftButtonUp="OnOmniboxSuggestionClick">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0,1" />
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="BorderThickness" Value="0" />
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="ItemBorder"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="6"
+                                                    Padding="10,6"
+                                                    SnapsToDevicePixels="True">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ItemHoverBrush}" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceActiveBrush}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Path Grid.Column="0"
+                                          Data="{StaticResource HistoryIcon}"
+                                          Width="13" Height="13"
+                                          Fill="{DynamicResource TextSecondaryBrush}"
+                                          Stretch="Uniform"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding MatchedPrefix}" FontWeight="Bold" Foreground="{DynamicResource BraveOrangeBrush}"/>
+                                        <Run Text="{Binding RemainingText}" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    </TextBlock>
+                                    <Button Grid.Column="2"
+                                            Style="{StaticResource IconButton}"
+                                            Width="20" Height="20"
+                                            Padding="4"
+                                            VerticalAlignment="Center"
+                                            ToolTip="Удалить из истории"
+                                            Command="{Binding DataContext.DeleteOmniboxSuggestionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}">
+                                        <Path Data="{StaticResource CloseIcon}" Width="9" Height="9" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform"/>
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Popup>
+
+            <!-- Paradoxus Shields Interactive Popup Flyout -->
+            <Popup IsOpen="{Binding IsShieldsPopupOpen, Mode=TwoWay}"
+                   PlacementTarget="{Binding ElementName=ShieldsButton}"
+                   Placement="Bottom"
+                   HorizontalOffset="-280"
+                   VerticalOffset="4"
+                   PopupAnimation="Fade"
+                   StaysOpen="False"
+                   AllowsTransparency="True">
+                <Border Style="{StaticResource AnimatedPopupPanel}"
+                        Width="330"
+                        Background="{DynamicResource SurfaceBgBrush}"
+                        BorderBrush="{DynamicResource BraveOrangeBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Margin="0,8,0,0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                    </Border.Effect>
+                    <StackPanel Margin="18">
+                        <!-- Popup Header -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Path Grid.Column="0" Data="{StaticResource ShieldIcon}" Width="20" Height="20" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Paradoxus Shields" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <TextBlock Text="{Binding SelectedTab.CurrentDomain}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <!-- Global Toggle Switch -->
+                            <controls:ToggleSwitch Grid.Column="2" IsToggled="{Binding SelectedTab.ShieldsEnabled}" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Separator Background="{DynamicResource BorderSubtleBrush}" Margin="0,0,0,14" />
+
+                        <!-- Shields Active Status -->
+                        <Border Background="{DynamicResource BgDarkBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Заблокировано на сайте" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <TextBlock Text="{Binding SelectedTab.AdBlockCount}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource BraveOrangeBrush}" Margin="0,2,0,0" />
+                                </StackPanel>
+                                <Path Grid.Column="1" Data="{StaticResource LockIcon}" Width="16" Height="16" Fill="{DynamicResource HttpsGreenBrush}" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            </Grid>
+                        </Border>
+
+                        <!-- All Time Stats -->
+                        <Grid Margin="0,0,0,14">
+                            <TextBlock Text="Всего нейтрализовано:" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Text="{Binding TotalBlockedAllTime}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Right" />
+                        </Grid>
+
+                        <!-- Protection Info Details -->
+                        <TextBlock Text="• Блокировка трекеров и межсайтовых Cookie&#x0a;• Защита от фишинга и криптомайнеров&#x0a;• Принудительное HTTPS шифрование"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   LineHeight="18" />
+                    </StackPanel>
+                </Border>
+            </Popup>
+
+            <!-- Downloads Interactive Popup Flyout -->
+            <Popup IsOpen="{Binding IsDownloadsPopupOpen, Mode=TwoWay}"
+                   PlacementTarget="{Binding ElementName=DownloadsButton}"
+                   Placement="Bottom"
+                   HorizontalOffset="-320"
+                   VerticalOffset="6"
+                   PopupAnimation="Fade"
+                   StaysOpen="False"
+                   AllowsTransparency="True">
+                <Border Style="{StaticResource AnimatedPopupPanel}"
+                        Width="380" MaxHeight="450"
+                        Background="{DynamicResource SurfaceBgBrush}"
+                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Margin="0,8,0,0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                    </Border.Effect>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Popup Header -->
+                        <Border Grid.Row="0" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource DownloadIcon}" Width="16" Height="16" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" Margin="0,0,8,0" />
+                                    <TextBlock Text="Загрузки" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                </StackPanel>
+                                <Button Content="Очистить" Style="{StaticResource IconButton}" FontSize="11" HorizontalAlignment="Right"
+                                        Command="{Binding ClearDownloadsCommand}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Empty State or List -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="380" Padding="8">
+                            <StackPanel>
+                                <TextBlock Text="Нет недавних загрузок"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="13"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,30,0,30">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Downloads.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <ItemsControl ItemsSource="{Binding Downloads}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource BgDarkBrush}"
+                                                    CornerRadius="8"
+                                                    Padding="10"
+                                                    Margin="0,0,0,6"
+                                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                                    BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding FormattedProgress}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,4" />
+                                                        <!-- Progress bar if downloading -->
+                                                        <ProgressBar Height="4"
+                                                                     Value="{Binding ProgressPercent}"
+                                                                     Style="{StaticResource NeonProgressBar}"
+                                                                     Visibility="{Binding IsDownloading, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                                                        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource BraveOrangeBrush}" Margin="0,2,0,0"
+                                                                   Visibility="{Binding IsCompleted, Converter={x:Static local:MainWindow.InverseBoolToVisibilityConverter}}" />
+                                                    </StackPanel>
+
+                                                    <!-- Action Buttons -->
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                        <Button Content="Открыть" Style="{StaticResource IconButton}" FontSize="11" Padding="6,4"
+                                                                Command="{Binding DataContext.OpenDownloadedFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding IsCompleted, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                                                        <Button Content="В папке" Style="{StaticResource IconButton}" FontSize="11" Padding="6,4"
+                                                                Command="{Binding DataContext.ShowInFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding IsCompleted, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                                                        <Button Content="✕" Style="{StaticResource IconButton}" FontSize="12" Padding="6,4" Foreground="{DynamicResource AlertRedBrush}"
+                                                                Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding IsDownloading, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Popup>
+        </Grid>
+
+        <!-- ========================================== -->
+        <!-- Command Palette (Ctrl+K) Modal Overlay     -->
+        <!-- ========================================== -->
+        <Grid Grid.Row="0" Grid.RowSpan="5"
+              Background="#80000000"
+              Visibility="{Binding IsCommandPaletteOpen, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}"
+              MouseDown="OnCommandPaletteBackdropMouseDown">
+            <Border Width="600"
+                    MaxHeight="480"
+                    Background="{DynamicResource SurfaceBgBrush}"
+                    BorderBrush="{DynamicResource BraveOrangeBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    VerticalAlignment="Top"
+                    Margin="0,80,0,0"
+                    MouseDown="OnCommandPaletteContainerMouseDown">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.6" Color="#000000"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Search Input -->
+                    <Border Grid.Row="0" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Path Grid.Column="0" Data="{StaticResource CommandPaletteIcon}" Width="16" Height="16" Fill="{DynamicResource BraveOrangeBrush}" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     x:Name="CommandPaletteSearchBox"
+                                     Text="{Binding CommandPaletteSearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource OmniboxTextBoxStyle}"
+                                     FontSize="15"
+                                     KeyDown="OnCommandPaletteKeyDown" />
+                            <Border Grid.Column="2" Background="{DynamicResource BgDarkBrush}" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                <TextBlock Text="ESC" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Items List -->
+                    <ListBox Grid.Row="1"
+                             x:Name="CommandPaletteListBox"
+                             ItemsSource="{Binding FilteredCommandPaletteItems}"
+                             SelectedItem="{Binding SelectedPaletteItem, Mode=TwoWay}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             MaxHeight="360"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             MouseDoubleClick="OnCommandPaletteItemDoubleClick"
+                             KeyDown="OnCommandPaletteListBoxKeyDown">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="BorderThickness" Value="0" />
+                                <Setter Property="Padding" Value="12,8" />
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="Bd"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="6"
+                                                    Margin="6,1"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource BraveOrangeBrush}" />
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceActiveBrush}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Subtitle}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="{DynamicResource BgDarkBrush}" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Category}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" />
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Footer Instructions -->
+                    <Border Grid.Row="2" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="12,6" Background="{DynamicResource BgDarkBrush}">
+                        <TextBlock Text="Навигация: ↑ ↓  •  Выбор: Enter  •  Закрыть: Esc" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" />
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

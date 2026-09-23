@@ -1,0 +1,427 @@
+﻿<UserControl x:Class="ParadoxusBrowser.Views.HubView"
+             PreviewMouseDown="HubView_PreviewMouseDown"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ParadoxusBrowser"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1000"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType"
+             RenderOptions.BitmapScalingMode="HighQuality"
+             Background="{DynamicResource BgDarkBrush}">
+
+    <Grid>
+        <!-- Main Hub Content Scrollable -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel HorizontalAlignment="Center" MaxWidth="920" Margin="24,40,24,60">
+
+                <!-- Brand Logo & Greeting -->
+                <StackPanel HorizontalAlignment="Center" Margin="0,0,0,28">
+                    <Border Width="64" Height="64"
+                            CornerRadius="20"
+                            Background="{DynamicResource BraveOrangeDimBrush}"
+                            BorderBrush="{DynamicResource BraveOrangeBrush}"
+                            BorderThickness="1.5"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,16">
+                        <Border.Effect>
+                            <DropShadowEffect Color="{DynamicResource BraveOrangeColor}" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
+                        </Border.Effect>
+                        <Path Data="{StaticResource ParadoxusLogoIcon}"
+                              Width="32" Height="32"
+                              Fill="{DynamicResource BraveOrangeBrush}"
+                              Stretch="Uniform"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="Paradoxus"
+                               FontSize="32"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Text="Приватный и безопасный веб-браузер нового поколения"
+                               FontSize="14"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Omnibox Hub: Central Search Bar with Glowing Focus -->
+                <Border x:Name="HubSearchBorder" Style="{StaticResource HubSearchContainerStyle}"
+                        Margin="0,0,0,36">
+                    <Grid Margin="16,0,12,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Search Engine Indicator Icon -->
+                        <Path Grid.Column="0"
+                              Data="{StaticResource BackIcon}"
+                              RenderTransformOrigin="0.5,0.5"
+                              Width="16" Height="16"
+                              Fill="{DynamicResource BraveOrangeBrush}"
+                              Stretch="Uniform"
+                              VerticalAlignment="Center"
+                              Margin="0,0,12,0">
+                            <Path.RenderTransform>
+                                <RotateTransform Angle="180"/>
+                            </Path.RenderTransform>
+                        </Path>
+
+                        <!-- Search Input Box -->
+                        <TextBox Grid.Column="1"
+                                 x:Name="HubSearchTextBox"
+                                 Style="{StaticResource OmniboxTextBoxStyle}"
+                                 FontSize="15"
+                                 Text="{Binding HubSearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                                 KeyDown="OnSearchKeyDown"
+                                 GotFocus="OnHubSearchGotFocus"
+                                 GotKeyboardFocus="OnHubSearchGotKeyboardFocus"
+                                 PreviewMouseLeftButtonDown="OnHubSearchPreviewMouseLeftButtonDown"
+                                 LostKeyboardFocus="OnHubSearchLostKeyboardFocus"
+                                 TextChanged="OnHubSearchTextChanged" />
+
+                        <!-- Search Submit Button -->
+                        <Button Grid.Column="2"
+                                Style="{StaticResource ShieldsButtonStyle}"
+                                Height="34"
+                                Padding="14,0"
+                                Focusable="False"
+                                Command="{Binding ExecuteHubSearchCommand}"
+                                ToolTip="Найти">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Найти"
+                                           FontWeight="SemiBold"
+                                           FontSize="13"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           Margin="0,0,4,0"/>
+                                <Path Data="{StaticResource ForwardIcon}"
+                                      Width="12" Height="12"
+                                      Fill="{DynamicResource BraveOrangeBrush}"
+                                      Stretch="Uniform"
+                                      VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                
+                <!-- Hub Search Suggestions Popup -->
+                <Popup x:Name="HubSuggestionsPopup"
+                       IsOpen="{Binding IsHubSuggestionsOpen, Mode=TwoWay}"
+                       PlacementTarget="{Binding ElementName=HubSearchBorder}"
+                       Placement="Bottom"
+                       HorizontalOffset="0"
+                       VerticalOffset="6"
+                       Width="{Binding ActualWidth, ElementName=HubSearchBorder}"
+                       StaysOpen="True"
+                       Focusable="False"
+                       AllowsTransparency="True"
+                       PopupAnimation="Fade">
+                    <Border Background="{DynamicResource PopupBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="4"
+                            SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                        </Border.Effect>
+                        <ListBox x:Name="HubSuggestionsList"
+                                 ItemsSource="{Binding HubSuggestions}"
+                                 SelectedItem="{Binding SelectedHubSuggestion, Mode=TwoWay}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 MaxHeight="260"
+                                 Focusable="False"
+                                 PreviewMouseLeftButtonUp="OnHubSuggestionClick">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0,1" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Cursor" Value="Hand" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="ItemBorder"
+                                                        Background="{TemplateBinding Background}"
+                                                        CornerRadius="6"
+                                                        Padding="12,8"
+                                                        SnapsToDevicePixels="True">
+                                                    <ContentPresenter />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ItemHoverBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceActiveBrush}" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Path Grid.Column="0"
+                                              Data="{StaticResource HistoryIcon}"
+                                              Width="14" Height="14"
+                                              Fill="{DynamicResource TextSecondaryBrush}"
+                                              Stretch="Uniform"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,10,0"/>
+                                        <TextBlock Grid.Column="1"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="14"
+                                                   TextTrimming="CharacterEllipsis">
+                                            <Run Text="{Binding MatchedPrefix}" FontWeight="Bold" Foreground="{DynamicResource BraveOrangeBrush}"/>
+                                            <Run Text="{Binding RemainingText}" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        </TextBlock>
+                                        <Button Grid.Column="2"
+                                                Style="{StaticResource IconButton}"
+                                                Width="22" Height="22"
+                                                Padding="5"
+                                                VerticalAlignment="Center"
+                                                ToolTip="Удалить из истории"
+                                                Command="{Binding DataContext.DeleteHubSuggestionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}">
+                                            <Path Data="{StaticResource CloseIcon}" Width="10" Height="10" Fill="{DynamicResource TextSecondaryBrush}" Stretch="Uniform"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Popup>
+
+                <!-- Speed Dial ("Табло") Header (hidden when HasFavorites is false) -->
+                <Grid Margin="0,0,0,12" Visibility="{Binding HasFavorites, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}">
+                    <TextBlock Text="Быстрый доступ"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Center" />
+                </Grid>
+
+                <!-- Speed Dial Tiles Grid -->
+                <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <!-- Dynamic Favorites Tiles -->
+                    <ItemsControl ItemsSource="{Binding Favorites}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Responsive 1-click Button Tile with Focusable="False" -->
+                                <Button Style="{StaticResource SpeedDialButtonStyle}"
+                                        Width="160" Height="110"
+                                        Margin="8"
+                                        Focusable="False"
+                                        Command="{Binding DataContext.NavigateFromHubCommand, RelativeSource={RelativeSource AncestorType=local:MainWindow}}"
+                                        CommandParameter="{Binding Url}">
+                                    <Grid Margin="12,10">
+                                        <Grid.RowDefinitions>
+                                             <RowDefinition Height="Auto" />
+                                             <RowDefinition Height="*" />
+                                             <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Top Row: Icon Letter Badge & Delete (X) button -->
+                                        <Grid Grid.Row="0">
+                                            <!-- Site Circle Badge -->
+                                            <Border Width="38" Height="38"
+                                                    CornerRadius="19"
+                                                    HorizontalAlignment="Left"
+                                                    Background="{Binding ColorHex}">
+                                                <TextBlock Text="{Binding IconLetter}"
+                                                           Foreground="#FFFFFF"
+                                                           FontWeight="Bold"
+                                                           FontSize="15"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <!-- Remove Tile Button (X) -->
+                                            <Button Style="{StaticResource IconButton}"
+                                                    Width="22" Height="22"
+                                                    Padding="4"
+                                                    Focusable="False"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    Command="{Binding DataContext.RemoveFavoriteCommand, RelativeSource={RelativeSource AncestorType=local:MainWindow}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="Удалить из Табло">
+                                                <Path Data="{StaticResource CloseIcon}"
+                                                      Width="10" Height="10"
+                                                      Fill="{DynamicResource TextMutedBrush}"
+                                                      Stretch="Uniform" />
+                                            </Button>
+                                        </Grid>
+
+                                        <!-- Title -->
+                                        <TextBlock Grid.Row="1"
+                                                   Text="{Binding Title}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="13"
+                                                   VerticalAlignment="Bottom"
+                                                   TextTrimming="CharacterEllipsis"/>
+
+                                        <!-- Domain URL -->
+                                        <TextBlock Grid.Row="2"
+                                                   Text="{Binding Domain}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   FontSize="11"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="0,2,0,0"/>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Add Site Tile (+) -->
+                    <Button Style="{StaticResource SpeedDialButtonStyle}"
+                            Width="160" Height="110"
+                            Margin="8"
+                            Focusable="False"
+                            Command="{Binding OpenAddFavoriteDialogCommand}"
+                            ToolTip="Добавить сайт на Табло">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Border Width="38" Height="38"
+                                    CornerRadius="19"
+                                    Background="{DynamicResource BraveOrangeDimBrush}"
+                                    BorderBrush="{DynamicResource BraveOrangeBrush}"
+                                    BorderThickness="1"
+                                    Margin="0,0,0,8">
+                                <Path Data="{StaticResource PlusIcon}"
+                                      Width="14" Height="14"
+                                      Fill="{DynamicResource BraveOrangeBrush}"
+                                      Stretch="Uniform"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Добавить сайт"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontWeight="Medium"
+                                       FontSize="12"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ============================================== -->
+        <!-- Modal Dialog: Add New Favorite to Speed Dial    -->
+        <!-- ============================================== -->
+        <Grid Visibility="{Binding IsAddFavoriteDialogOpen, Converter={x:Static local:MainWindow.BoolToVisibilityConverter}}">
+            <!-- Dimmer Backdrop -->
+            <Border Background="#77000000" MouseLeftButtonDown="OnCancelAddFavoriteClick" />
+
+            <!-- Dialog Card with AnimatedPopupPanel Style -->
+            <Border Style="{StaticResource AnimatedPopupPanel}"
+                    Width="400"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    Background="{DynamicResource SurfaceBgBrush}"
+                    BorderBrush="{DynamicResource BraveOrangeBrush}"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    Padding="24">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="4" Opacity="0.4" Color="#000000"/>
+                </Border.Effect>
+
+                <StackPanel>
+                    <!-- Dialog Title -->
+                    <TextBlock Text="Добавить сайт на Табло"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               Margin="0,0,0,18" />
+
+                    <!-- Site Title Field -->
+                    <TextBlock Text="Название сайта"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="12"
+                               Margin="0,0,0,6" />
+                    <Border Background="{DynamicResource BgDarkBrush}"
+                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Height="38"
+                            Margin="0,0,0,16">
+                        <TextBox Style="{StaticResource OmniboxTextBoxStyle}"
+                                 Text="{Binding NewFavoriteTitle, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="10,0" />
+                    </Border>
+
+                    <!-- Site URL Field -->
+                    <TextBlock Text="Адрес сайта (URL)"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="12"
+                               Margin="0,0,0,6" />
+                    <Border Background="{DynamicResource BgDarkBrush}"
+                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Height="38"
+                            Margin="0,0,0,24">
+                        <TextBox Style="{StaticResource OmniboxTextBoxStyle}"
+                                 Text="{Binding NewFavoriteUrl, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="10,0" />
+                    </Border>
+
+                    <!-- Action Buttons -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Content="Отмена"
+                                Height="38"
+                                Style="{StaticResource IconButton}"
+                                Background="{DynamicResource HeaderBgBrush}"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                FontWeight="Medium"
+                                Command="{Binding CancelAddFavoriteCommand}" />
+
+                        <Button Grid.Column="2"
+                                Content="Добавить"
+                                Height="38"
+                                Style="{StaticResource ShieldsButtonStyle}"
+                                Background="{DynamicResource BraveOrangeBrush}"
+                                Foreground="#FFFFFF"
+                                FontWeight="SemiBold"
+                                Command="{Binding ConfirmAddFavoriteCommand}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

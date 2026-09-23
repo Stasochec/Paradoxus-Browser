@@ -1,0 +1,67 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Color x:Key="BgDarkColor">#18191E</Color>
+    <SolidColorBrush x:Key="BgDarkBrush" Color="{StaticResource BgDarkColor}" />
+
+    <Color x:Key="HeaderBgColor">#1F2026</Color>
+    <SolidColorBrush x:Key="HeaderBgBrush" Color="{StaticResource HeaderBgColor}" />
+
+    <Color x:Key="SurfaceBgColor">#25272E</Color>
+    <SolidColorBrush x:Key="SurfaceBgBrush" Color="{StaticResource SurfaceBgColor}" />
+
+    <Color x:Key="SurfaceHoverColor">#2E313A</Color>
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="{StaticResource SurfaceHoverColor}" />
+
+    <Color x:Key="SurfaceActiveColor">#363A45</Color>
+    <SolidColorBrush x:Key="SurfaceActiveBrush" Color="{StaticResource SurfaceActiveColor}" />
+
+    <Color x:Key="BraveOrangeColor">#FF7600</Color>
+    <SolidColorBrush x:Key="BraveOrangeBrush" Color="{StaticResource BraveOrangeColor}" />
+
+    <Color x:Key="BraveOrangeHoverColor">#FF8F29</Color>
+    <SolidColorBrush x:Key="BraveOrangeHoverBrush" Color="{StaticResource BraveOrangeHoverColor}" />
+
+    <Color x:Key="BraveOrangeDimColor">#33FF7600</Color>
+    <SolidColorBrush x:Key="BraveOrangeDimBrush" Color="{StaticResource BraveOrangeDimColor}" />
+
+    <Color x:Key="PrivatePurpleColor">#9B51E0</Color>
+    <SolidColorBrush x:Key="PrivatePurpleBrush" Color="{StaticResource PrivatePurpleColor}" />
+
+    <Color x:Key="PrivateBgColor">#1F1A28</Color>
+    <SolidColorBrush x:Key="PrivateBgBrush" Color="{StaticResource PrivateBgColor}" />
+
+    <Color x:Key="HttpsGreenColor">#27AE60</Color>
+    <SolidColorBrush x:Key="HttpsGreenBrush" Color="{StaticResource HttpsGreenColor}" />
+
+    <Color x:Key="AlertRedColor">#EB5757</Color>
+    <SolidColorBrush x:Key="AlertRedBrush" Color="{StaticResource AlertRedColor}" />
+
+    <Color x:Key="TextPrimaryColor">#FFFFFF</Color>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+
+    <Color x:Key="TextSecondaryColor">#9E9FA6</Color>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+
+    <Color x:Key="TextMutedColor">#6C6E79</Color>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
+
+    <Color x:Key="BorderSubtleColor">#2B2E38</Color>
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="{StaticResource BorderSubtleColor}" />
+
+    <Color x:Key="BorderHighlightColor">#3E4250</Color>
+    <SolidColorBrush x:Key="BorderHighlightBrush" Color="{StaticResource BorderHighlightColor}" />
+
+
+    <Color x:Key="CardBackgroundColor">#212328</Color>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource CardBackgroundColor}" />
+
+    <Color x:Key="PopupBackgroundColor">#1B1C22</Color>
+    <SolidColorBrush x:Key="PopupBackgroundBrush" Color="{StaticResource PopupBackgroundColor}" />
+
+    <Color x:Key="BorderColor">#3A3C46</Color>
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+
+    <Color x:Key="ItemHoverColor">#2E303A</Color>
+    <SolidColorBrush x:Key="ItemHoverBrush" Color="{StaticResource ItemHoverColor}" />
+</ResourceDictionary>
